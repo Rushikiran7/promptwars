@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Stadium Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        stadium: {
+                            900: '#0f172a',
+                            800: '#1e293b',
+                            700: '#334155',
+                            accent: '#38bdf8', // Brighter cyan for better contrast
+                            success: '#4ade80', // Brighter green
+                            warning: '#facc15', // Brighter yellow
+                            danger: '#f87171'   // Brighter red
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .progress-bar { transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out; }
+        .expandable-content { 
+            max-height: 0; 
+            overflow: hidden; 
+            transition: max-height 0.3s ease-out, padding 0.3s ease; 
+        }
+        .expanded .expandable-content { 
+            max-height: 120px; 
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+        .chevron { transition: transform 0.3s ease; }
+        .expanded .chevron { transform: rotate(180deg); }
+        
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
+    </style>
+</head>
+<body class="min-h-screen font-sans p-4 md:p-8 bg-fixed bg-center bg-cover text-white" style="background-image: url('/static/csm_OI-Stadia-wars-website_0bd4341a04.webp');">
+
+    <!-- Dark overlay to subtly dim the image without blurring it, keeping it fully visible -->
+    <div class="fixed inset-0 bg-black/40 z-[-1]"></div>
+
+    <div class="max-w-6xl mx-auto space-y-6 relative z-10">
+        
+        <!-- Header & Live Score -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-white/20 pb-6 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-white tracking-tight drop-shadow-md">Smart Stadium <span class="text-stadium-accent">Live Operations</span></h1>
+                <p class="text-slate-300 mt-1 font-medium drop-shadow">Real-time crowd and concession tracking</p>
+            </div>
+            
+            <!-- Live Score Board -->
+            <div class="bg-black/40 backdrop-blur-lg border border-white/10 rounded-xl p-3 shadow-2xl flex items-center space-x-6">
+                <div class="text-center">
+                    <span class="block text-xs text-slate-300 uppercase tracking-wider mb-1" id="score-period">QTR</span>
+                    <span class="text-sm font-semibold text-stadium-accent" id="score-time">00:00</span>
+                </div>
+                <div class="flex items-center space-x-4 text-xl font-bold text-white">
+                    <span id="home-team" class="drop-shadow">Home</span>
+                    <span id="home-score" class="text-2xl bg-white/10 px-3 py-1 rounded shadow-inner">0</span>
+                    <span class="text-slate-400 text-sm">-</span>
+                    <span id="away-score" class="text-2xl bg-white/10 px-3 py-1 rounded shadow-inner">0</span>
+                    <span id="away-team" class="drop-shadow">Away</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Top Overview Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Total Attendance -->
+            <div class="bg-black/50 backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-2xl flex items-center justify-between hover:bg-black/60 transition-colors">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-stadium-success/20 p-3 rounded-xl text-stadium-success shadow-inner border border-stadium-success/30">
+                        <svg class="w-8 h-8 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-white drop-shadow">Total Attendance</h2>
+                        <p class="text-slate-300 text-sm font-medium">Live stadium headcount</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span id="total-people" class="text-4xl font-bold text-white drop-shadow-lg">0</span>
+                    <span id="capacity-info" class="block text-xs text-slate-400 mt-1 font-medium">/ 0 Capacity</span>
+                </div>
+            </div>
+
+            <!-- Recommended Exit -->
+            <div class="bg-black/50 backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-2xl flex items-center justify-between hover:bg-black/60 transition-colors">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-stadium-accent/20 p-3 rounded-xl text-stadium-accent shadow-inner border border-stadium-accent/30">
+                        <svg class="w-8 h-8 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-white drop-shadow">Recommended Exit</h2>
+                        <p class="text-slate-300 text-sm font-medium">Optimal routing based on density</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span id="best-gate" class="text-4xl font-bold text-stadium-success drop-shadow-lg">Calc...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Gates Section -->
+            <section class="bg-black/50 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
+                <div class="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+                    <h3 class="text-xl font-semibold text-white drop-shadow">Gate Densities</h3>
+                    <span class="text-xs text-slate-300 font-medium bg-white/10 px-2 py-1 rounded shadow-inner border border-white/5">Click rows to expand</span>
+                </div>
+                <div id="gates-container" class="divide-y divide-white/10">
+                    <!-- Dynamic content -->
+                </div>
+            </section>
+
+            <!-- Concessions & Areas Section -->
+            <section class="bg-black/50 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
+                <div class="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+                    <h3 class="text-xl font-semibold text-white drop-shadow">Wait Times</h3>
+                    <span class="text-xs text-slate-300 font-medium bg-white/10 px-2 py-1 rounded shadow-inner border border-white/5">Click rows to expand</span>
+                </div>
+                <div id="concessions-container" class="divide-y divide-white/10">
+                    <!-- Dynamic content -->
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        function getColorClassForDensity(percentage) {
+            if (percentage < 40) return 'bg-stadium-success';
+            if (percentage < 75) return 'bg-stadium-warning';
+            return 'bg-stadium-danger';
+        }
+
+        function getColorClassForWaitTime(minutes) {
+            if (minutes < 10) return 'bg-stadium-success';
+            if (minutes < 20) return 'bg-stadium-warning';
+            return 'bg-stadium-danger';
+        }
+
+        function toggleExpand(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('expanded');
+        }
+
+        const expandedState = {};
+        function handleRowClick(id) {
+            expandedState[id] = !expandedState[id];
+            toggleExpand(id);
+        }
+
+        async function fetchStatus() {
+            try {
+                const response = await fetch('/api/status');
+                if (!response.ok) throw new Error('Network error');
+                const data = await response.json();
+                updateDashboard(data);
+            } catch (error) {
+                console.error("Failed to fetch:", error);
+            }
+        }
+
+        function updateDashboard(data) {
+            // Update Score & Total People
+            document.getElementById('total-people').innerText = data.stadium_info.total_people.toLocaleString();
+            document.getElementById('capacity-info').innerText = `/ ${data.stadium_info.capacity.toLocaleString()} Capacity`;
+            
+            document.getElementById('home-team').innerText = data.live_score.home_team;
+            document.getElementById('home-score').innerText = data.live_score.home_score;
+            document.getElementById('away-team').innerText = data.live_score.away_team;
+            document.getElementById('away-score').innerText = data.live_score.away_score;
+            document.getElementById('score-period').innerText = data.live_score.period;
+            document.getElementById('score-time').innerText = data.live_score.time_remaining;
+
+            document.getElementById('best-gate').innerText = data.recommended_exit;
+
+            // Update Gates
+            const gatesContainer = document.getElementById('gates-container');
+            let gatesHTML = '';
+            for (const [gateName, gateData] of Object.entries(data.gates)) {
+                const safeId = 'gate-' + gateName.replace(/\s+/g, '-');
+                const isExpanded = expandedState[safeId] ? 'expanded' : '';
+                const colorClass = getColorClassForDensity(gateData.density_percent);
+                
+                gatesHTML += `
+                    <div id="${safeId}" class="p-4 hover:bg-white/10 cursor-pointer transition-colors ${isExpanded}" onclick="handleRowClick('${safeId}')">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center space-x-2">
+                                <svg class="w-4 h-4 chevron text-slate-300 drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                <span class="font-semibold text-slate-100 drop-shadow">${gateName}</span>
+                            </div>
+                            <span class="font-bold text-white drop-shadow">${gateData.density_percent}%</span>
+                        </div>
+                        <div class="w-full bg-black/40 rounded-full h-2.5 overflow-hidden shadow-inner border border-white/5">
+                            <div class="h-2.5 rounded-full ${colorClass} progress-bar shadow-[0_0_10px_currentColor]" style="width: ${gateData.density_percent}%"></div>
+                        </div>
+                        
+                        <!-- Expanded details -->
+                        <div class="expandable-content border-t border-white/10 mt-3 pt-0">
+                            <div class="grid grid-cols-3 gap-4 text-center">
+                                <div class="bg-black/30 p-2 rounded-lg border border-white/5 shadow-inner">
+                                    <span class="block text-xs text-slate-300 font-medium mb-1">Live Count</span>
+                                    <span class="text-sm font-bold text-white">${gateData.headcount.toLocaleString()}</span>
+                                </div>
+                                <div class="bg-black/30 p-2 rounded-lg border border-white/5 shadow-inner">
+                                    <span class="block text-xs text-slate-300 font-medium mb-1">Throughput</span>
+                                    <span class="text-sm font-bold text-white">${gateData.throughput}/min</span>
+                                </div>
+                                <div class="bg-black/30 p-2 rounded-lg border border-white/5 shadow-inner">
+                                    <span class="block text-xs text-slate-300 font-medium mb-1">Active Staff</span>
+                                    <span class="text-sm font-bold text-white">${gateData.staff}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            gatesContainer.innerHTML = gatesHTML;
+
+            // Update Wait Times
+            const concessionsContainer = document.getElementById('concessions-container');
+            let concessionsHTML = '';
+            for (const [areaName, areaData] of Object.entries(data.wait_times)) {
+                const safeId = 'area-' + areaName.replace(/[^a-zA-Z0-9]/g, '-');
+                const isExpanded = expandedState[safeId] ? 'expanded' : '';
+                const colorClass = getColorClassForWaitTime(areaData.minutes);
+                const waitPercentage = Math.min((areaData.minutes / 30) * 100, 100);
+                
+                concessionsHTML += `
+                    <div id="${safeId}" class="p-4 hover:bg-white/10 cursor-pointer transition-colors ${isExpanded}" onclick="handleRowClick('${safeId}')">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center space-x-2">
+                                <svg class="w-4 h-4 chevron text-slate-300 drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                <span class="font-semibold text-slate-100 drop-shadow">${areaName}</span>
+                            </div>
+                            <span class="font-bold text-white drop-shadow">${areaData.minutes} min</span>
+                        </div>
+                        <div class="w-full bg-black/40 rounded-full h-2.5 overflow-hidden shadow-inner border border-white/5">
+                            <div class="h-2.5 rounded-full ${colorClass} progress-bar shadow-[0_0_10px_currentColor]" style="width: ${waitPercentage}%"></div>
+                        </div>
+                        
+                        <!-- Expanded details -->
+                        <div class="expandable-content border-t border-white/10 mt-3 pt-0">
+                            <div class="flex justify-around text-center">
+                                <div class="bg-black/30 p-2 rounded-lg w-5/12 border border-white/5 shadow-inner">
+                                    <span class="block text-xs text-slate-300 font-medium mb-1">People in Line</span>
+                                    <span class="text-sm font-bold text-white">${areaData.in_line}</span>
+                                </div>
+                                <div class="bg-black/30 p-2 rounded-lg w-5/12 border border-white/5 shadow-inner">
+                                    <span class="block text-xs text-slate-300 font-medium mb-1">Status</span>
+                                    <span class="text-sm font-bold drop-shadow ${areaData.status === 'Clear' ? 'text-stadium-success' : (areaData.status === 'Moderate' ? 'text-stadium-warning' : 'text-stadium-danger')}">${areaData.status}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            concessionsContainer.innerHTML = concessionsHTML;
+        }
+
+        fetchStatus();
+        setInterval(fetchStatus, 3000);
+    </script>
+</body>
+</html>
